@@ -1,0 +1,41 @@
+{
+  "data_kind": "demo",
+  "mode": "run",
+  "shape": "loop",
+  "start_id": "A",
+  "end_id": "A",
+  "departure_at": "2026-10-09T23:50:00+08:00",
+  "pace_min_per_km": 6,
+  "target_distance_m": 8000,
+  "max_distance_m": 8500,
+  "legs": [
+    {
+      "from_id": "A",
+      "to_id": "B",
+      "distance_m": 4000,
+      "source": "amap_walking",
+      "evidence": "synthetic-example-not-a-real-road-A-B"
+    },
+    {
+      "from_id": "B",
+      "to_id": "A",
+      "distance_m": 4200,
+      "source": "amap_walking",
+      "evidence": "synthetic-example-not-a-real-road-B-A"
+    }
+  ],
+  "stops": [
+    {
+      "after_leg": 1,
+      "name": "Fictional stop B",
+      "dwell_minutes": 15,
+      "hours_evidence": "synthetic-example-not-real-opening-hours",
+      "opening_windows": [
+        {
+          "opens_at": "2026-10-09T18:00:00+08:00",
+          "closes_at": "2026-10-10T00:20:00+08:00"
+        }
+      ]
+    }
+  ]
+}

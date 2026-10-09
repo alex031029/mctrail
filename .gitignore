@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+.mcp.json
+mcp-config.json
+*.local.json
+*-token.txt
+*-key.txt
+.runtime/
+__pycache__/
+*.py[cod]
+.venv/
+.DS_Store

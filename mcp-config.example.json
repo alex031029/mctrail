@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "amap-maps": {
+      "type": "http",
+      "url": "https://mcp.amap.com/mcp?key=${AMAP_MAPS_API_KEY}"
+    },
+    "mcd-mcp": {
+      "type": "http",
+      "url": "https://mcp.mcd.cn",
+      "headers": {
+        "Authorization": "Bearer ${MCD_MCP_TOKEN}"
+      }
+    }
+  }
+}
