@@ -1,0 +1,105 @@
+{
+  "description": "Synthetic, simplified staged-tool replays for address resolution, not exact MCP response schemas. No live map calls or credentials.",
+  "replay_context": "Each case is independent. All trip requirements unrelated to place identity are already resolved. Ask for the next action and point record, not a complete route. Hide expected_next and must_not from the test agent.",
+  "cases": [
+    {
+      "id": "landmark-road-hit",
+      "request": "从上海人民广场出发跑约8公里再回来，北京时间2026年10月10日21点，六分配速，中途休息10分钟，最多9公里。",
+      "available": [
+        {
+          "tool": "maps_geo",
+          "result": {
+            "name": "人民广场",
+            "level": "道路",
+            "location": "121.477401,31.240093"
+          }
+        }
+      ],
+      "expected_next": "Search landmark POIs in the requested city and obtain the chosen POI detail before routing. Do not accept the road-level hit as the square.",
+      "must_not": ["Call directions using the road-level hit", "Use numeric coordinate validity as proof of the requested landmark"]
+    },
+    {
+      "id": "two-plausible-places",
+      "request": "从杭州市中心广场出发骑一圈，其他要求不变，别再多问，先算起来。",
+      "available": [
+        {
+          "tool": "maps_text_search",
+          "result": [
+            {"id": "fixture-north", "name": "中心广场", "city": "杭州市", "address": "合成北区中山路10号", "type": "广场"},
+            {"id": "fixture-south", "name": "中心广场", "city": "杭州市", "address": "合成南区建设路88号", "type": "广场"}
+          ]
+        }
+      ],
+      "expected_next": "Ask the user to choose between the two distinct plausible squares, showing addresses; do not pick the first result or start directions.",
+      "must_not": ["Route before the user chooses", "Treat the desire for speed as resolving the place identity"]
+    },
+    {
+      "id": "one-place-among-name-collisions",
+      "request": "从武汉市星湖公园出发跑一圈，没有指定哪个入口。",
+      "available": [
+        {
+          "tool": "maps_text_search",
+          "result": [
+            {"id": "fixture-park", "name": "星湖公园", "city": "武汉市", "address": "合成星湖路1号", "type": "公园"},
+            {"id": "fixture-metro", "name": "星湖公园站", "city": "武汉市", "address": "合成星湖路9号", "type": "地铁站"},
+            {"id": "fixture-stop", "name": "星湖公园公交站", "city": "武汉市", "address": "合成星湖路5号", "type": "公交站"}
+          ]
+        },
+        {
+          "tool": "maps_search_detail",
+          "result": {"id": "fixture-park", "name": "星湖公园", "city": "武汉市", "address": "合成星湖路1号", "type": "公园", "location": "114.30,30.60"}
+        }
+      ],
+      "expected_next": "Use the unique semantically matching park POI, disclose its exact address and map-point basis, and preserve the fact that no entrance has been confirmed. Do not ask the user to choose a park versus irrelevant stations.",
+      "must_not": ["Invent a park entrance", "Ask merely because the raw search returned more than one item", "Label the map point as user-confirmed"]
+    },
+    {
+      "id": "user-selected-entrance",
+      "request": "跑步环线的起点用我刚才选的合成星湖公园东门，POI fixture-east。不要换成公园中心。",
+      "available": [
+        {
+          "tool": "maps_search_detail",
+          "result": {"id": "fixture-east", "name": "星湖公园东门", "city": "武汉市", "address": "合成星湖路1号东侧", "type": "出入口", "location": "114.31,30.60"}
+        }
+      ],
+      "expected_next": "Keep the selected entrance ID and detail coordinates; do not search and replace it with the park center, and do not ask the user to choose it again.",
+      "must_not": ["Replace the entrance with a similarly named center point", "Repeat an already answered selection question"]
+    },
+    {
+      "id": "detail-failure",
+      "request": "就从刚才搜索出的公园出发，地图详情失败也没关系，先给我算距离。",
+      "available": [
+        {
+          "tool": "maps_text_search",
+          "result": [{"id": "fixture-park", "name": "星湖公园", "city": "武汉市", "address": "合成星湖路1号", "type": "公园"}]
+        },
+        {"tool": "maps_search_detail", "result": {"error": "rate_limited", "location": null, "retry_instruction": "Do not retry in this session"}}
+      ],
+      "expected_next": "Keep the point unresolved, report the failed detail query and pause without routing or retrying, following the supplied service instruction.",
+      "must_not": ["Borrow a road geocode or guessed coordinate", "Treat a result with no location as a resolved point"]
+    },
+    {
+      "id": "changed-point-invalidates-route",
+      "request": "刚才跑步环线的A是同名道路，起点改成真正广场。其余要求不变。",
+      "available": [
+        {"point": {"id": "A", "poi_id": "fixture-old", "location": "121.477401,31.240093"}},
+        {"new_detail": {"id": "fixture-square", "name": "上海人民广场", "city": "上海市", "address": "人民大道185号", "type": "广场", "location": "121.475213,31.228827"}},
+        {
+          "unchanged_points": [
+            {"id": "B", "poi_id": "fixture-B", "location": "121.49,31.23", "evidence": "synthetic-unchanged-detail-B"},
+            {"id": "C", "poi_id": "fixture-C", "location": "121.48,31.22", "evidence": "synthetic-unchanged-detail-C"}
+          ]
+        },
+        {
+          "existing_legs": [
+            {"from_id": "A", "to_id": "B", "distance_m": 1400},
+            {"from_id": "B", "to_id": "C", "distance_m": 1900},
+            {"from_id": "C", "to_id": "A", "distance_m": 2800}
+          ]
+        }
+      ],
+      "expected_next": "Replace A's identity and coordinates, discard and requery A-B and C-A, retain unchanged B-C only with its original evidence, then recalculate all arrival times, opening-window decisions and maps before delivery.",
+      "must_not": ["Reuse A-B or C-A distances with a new label", "Keep old arrival times or old route-map links", "Assume local ID A makes changed coordinates equivalent"]
+    }
+  ]
+}
