@@ -11,6 +11,7 @@
 ## 能做什么
 
 - 引导 Agent 使用高德实际步行/骑行路网规划候选，而不是拿直线凑里程。
+- 路由前先核对地点：地标优先 POI 搜索与详情，多个合理候选再询问；同名道路不能替代广场。
 - 串接麦当劳门店查询，核对地点身份与到访时间；未知营业信息明确保留未知。
 - 用 Python 计算分段里程、预计时刻、跨午夜停留和营业窗口冲突。
 - 输出路线卡片：里程、用时、补给站、来源、不确定项及有依据的地图入口。
@@ -73,6 +74,10 @@ Skill 不需要、更不应该让 Agent 读取凭据文件。Token/Key 不出现
 
 以上只是输入示例，**不是已查询或推荐的真实路线**。Agent 应确认具体点位与日期，
 查到真实道路数据后才能输出路线；没有地图连接时应说明缺失，不凭常识生成路线。
+如果名称同时命中公园、车站或同名道路，Agent 先按用户语义筛选和核对详情。
+唯一合理地点可说明采用的地图标注点后继续；多个合理地点则先请用户选择，不先算错一圈再返工。
+主 POI 不代表特定入口；指定入口时必须匹配入口。修改点位后会要求重查受影响路段，
+重新计算时刻并生成地图。详见 [地点解析规则](skills/mctrail/references/place-resolution.md)。
 夜间没有照明、通行或堂食证据时不能承诺“安全”或“可以进店休息”。
 
 ## 不用 Key 的计算演示
@@ -94,11 +99,13 @@ python .\skills\mctrail\scripts\route_metrics.py .\skills\mctrail\examples\night
 skills\mctrail\
   SKILL.md                 触发条件、规划步骤与输出格式
   references\tools.md      两个 MCP 的职责、身份匹配与失败处理
+  references\place-resolution.md 路由前地点消歧、点位记录和失效规则
   references\route-input.md 计算器 JSON 契约
   scripts\route_metrics.py 分段数字、时间和营业窗口计算
   examples\night-loop.json 明确标记的合成反例
 tests\
   test_route_metrics.py    计算器行为测试
+  place-resolution-cases.json 定位流程的合成 Agent 回放案例
 MCP_INTEGRATION.md         接入流程、业务价值与联调边界
 mcp-config.example.json   无凭据模板
 ```
@@ -112,6 +119,12 @@ mcp-config.example.json   无凭据模板
 ```powershell
 python -m unittest discover -s tests -v
 ```
+
+`tests\place-resolution-cases.json` 是六个暂停在地图查询结果处的合成场景，
+用于独立新会话测试，不由 unittest 自动评分。向测试 Agent 提供 `replay_context`、`request` 和 `available`，
+以及已安装的 Skill；`expected_next` / `must_not` 留给评测者，不提前提示答案。
+观察下一步调用/追问，而不只看最后有没有一条路线；分别覆盖道路误命中、多个合理地点、
+公园与车站同名、用户已选入口、详情失败，以及改变起点后首尾路段失效。
 
 补充现场案例时先去掉个人地址和账号信息；合成样例与真实查询结果必须分别标注。
 后续联调重点是：步行/骑行真实返回结构、门店跨源身份、跨午夜营业时间、
